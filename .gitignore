@@ -1,0 +1,9 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Generated runtime directories to save user data
+javas/
+plugins/
+versions/
+servers/

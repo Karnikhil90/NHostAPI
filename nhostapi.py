@@ -3,6 +3,33 @@ import requests
 import shutil
 import subprocess
 import threading
+import platform
+# import tarfile,zipfile 
+from packaging.version import Version
+
+
+# Java - Minecraft mapping (ignore patch versions)
+JAVA_MC_MAP = {
+    8:  ("1.8.0",  "1.16.5"),
+    16: ("1.17.0", "1.17.1"),
+    17: ("1.18.0", "1.20.4"),
+    21: ("1.20.5", "1.21.9"),
+}
+
+JAVA_DOWNLOADS = {
+    8: {
+        "linux": "https://api.adoptium.net/v3/binary/latest/8/ga/linux/x64/jre/hotspot/normal/eclipse",
+        "windows": "https://api.adoptium.net/v3/binary/latest/8/ga/windows/x64/jre/hotspot/normal/eclipse"
+    },
+    17: {
+        "linux": "https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jre/hotspot/normal/eclipse",
+        "windows": "https://api.adoptium.net/v3/binary/latest/17/ga/windows/x64/jre/hotspot/normal/eclipse"
+    },
+    21: {
+        "linux": "https://api.adoptium.net/v3/binary/latest/21/ga/linux/x64/jre/hotspot/normal/eclipse",
+        "windows": "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse"
+    }
+}
 
 CORE_PLUGINS = {
     1: ("ViaVersion.jar", "https://github.com/ViaVersion/ViaVersion/releases/download/5.6.0/ViaVersion-5.6.0.jar"),
@@ -12,21 +39,6 @@ CORE_PLUGINS = {
     5: ("floodgate-spigot.jar", "https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot"),
     6: ("Chunky.jar", "https://cdn.modrinth.com/data/fALzjamp/versions/P3y2MXnd/Chunky-Bukkit-1.4.40.jar"),
 }
-
-MORE_PLUGINS = {
-    1: ("ClearLag.jar", "https://cdn.modrinth.com/data/LY9bsstc/versions/aZHtlHAi/ClearLag-1.0.1.jar"),
-    2 : ("TAB.jar", "https://cdn.modrinth.com/data/gG7VFbG0/versions/BQc9Xm3K/TAB%20v5.4.0.jar"),
-    3 : ("PVDC.jar" , "https://cdn.modrinth.com/data/shwtt0v9/versions/jrKq7Fvp/PVDC-2.3.3.jar")
-}
-
-
-def show_plugin_menu():
-    print("\nAvailable Plugins:")
-    for idx, (name, _) in MORE_PLUGINS.items():
-        print(f" {idx}. {name}")
-
-    print("\nExample input: 1 2 4 6")
-    print("Press ENTER to skip plugin installation")
 
 
 class MinecraftServer:
@@ -128,11 +140,11 @@ class MinecraftServer:
 
                 f.write(f"{k}={v}\n")
 
-    def install_plugins_by_index(self, extra_indexes: list[int] | None = None):
+    def install_plugins(self, extra_plugins: list[tuple[str, str]] | None = None):
         world_plugins = os.path.join(self.world_dir, "plugins")
         os.makedirs(world_plugins, exist_ok=True)
 
-        def install(jar, url):
+        def install(jar: str, url: str):
             cache_path = os.path.join(self.plugins_dir, jar)
             world_path = os.path.join(world_plugins, jar)
 
@@ -149,22 +161,90 @@ class MinecraftServer:
                 shutil.copy(cache_path, world_path)
                 print(f"✔ Installed {jar}")
 
+        # Always install core plugins
         for jar, url in CORE_PLUGINS.values():
             install(jar, url)
 
-        if not extra_indexes:
+        # Optional extra plugins (tuple-based)
+        if not extra_plugins:
             return
 
-        for idx in extra_indexes:
-            if idx not in MORE_PLUGINS:
-                print(f"⚠ Invalid extra plugin index: {idx}")
-                continue
-
-            jar, url = MORE_PLUGINS[idx]
+        for jar, url in extra_plugins:
             install(jar, url)
 
+    def get_os(self) -> str:
+        return "windows" if platform.system().lower().startswith("win") else "linux"
+
+    def ensure_java(self, java_ver: int) -> str:
+        os_name = self.get_os()
+
+        base_dir = os.path.join("javas", f"java{java_ver}")
+        java_bin = "bin/java.exe" if os_name == "windows" else "bin/java"
+        java_path = os.path.join(base_dir, java_bin)
+
+        if os.path.exists(java_path):
+            return os.path.abspath(java_path)
+
+        print(f"⬇ Downloading Java {java_ver}")
+        os.makedirs(base_dir, exist_ok=True)
+
+        url = JAVA_DOWNLOADS[java_ver][os_name]
+        archive = os.path.join(base_dir, "runtime_download")
+
+        r = requests.get(url, stream=True)
+        r.raise_for_status()
+
+        with open(archive, "wb") as f:
+            for c in r.iter_content(8192):
+                if c:
+                    f.write(c)
+
+        # extract (ZIP first, then TAR) ----
+        extracted = False
+
+        try:
+            import zipfile
+            with zipfile.ZipFile(archive) as z:
+                z.extractall(base_dir)
+            extracted = True
+        except zipfile.BadZipFile:
+            pass
+
+        if not extracted:
+            import tarfile
+            with tarfile.open(archive) as t:
+                t.extractall(base_dir)
+
+        os.remove(archive)
+
+        # ---- flatten Adoptium folder ----
+        inner = os.listdir(base_dir)[0]
+        inner_path = os.path.join(base_dir, inner)
+
+        for item in os.listdir(inner_path):
+            shutil.move(os.path.join(inner_path, item), base_dir)
+
+        os.rmdir(inner_path)
+
+        return os.path.abspath(java_path)
+
+    def replace_java_in_cmd(self, cmd: str, java_bin: str) -> list[str]:
+        parts = cmd.split()
+        parts[0] = java_bin
+        return parts
+
+    def mc_to_java(self, mc_version: str) -> int:
+        v = Version(mc_version)
+        for java, (start, end) in JAVA_MC_MAP.items():
+            if Version(start) <= v <= Version(end):
+                return java
+        raise RuntimeError(f"No Java mapping for Minecraft {mc_version}")
+
     def start(self):
-        cmd = self.cmd.split()
+        java_ver = self.mc_to_java(self.config["version"])
+        java_bin = self.ensure_java(java_ver)
+
+        cmd = self.replace_java_in_cmd(self.cmd, java_bin)
 
         self.process = subprocess.Popen(
             cmd,
@@ -197,37 +277,3 @@ class MinecraftServer:
                 self.process.stdin.write("stop\n")
                 self.process.stdin.flush()
                 break
-
-
-if __name__ == "__main__":
-
-    config = {
-        "motd" : "Nikhil Java & Bedrock Server",
-        "version": input("MC Version [1.21.8]: ") or "1.21.8",
-        "world_name": input("World Name [bedrock]: ") or "bedrock",
-        "view-distance": int(input("View Distance [8]: ") or 8),
-        "port": 25565,
-        "gamemode": "survival",
-        "difficulty": "normal",
-        "online-mode": False,
-        "hardcore": False,
-    }
-
-    max_ram = input("Max RAM [2G]: ") or "2G"
-    run_cmd = f"java -Xms128M -Xmx{max_ram} -jar server.jar nogui"
-
-    server = MinecraftServer(config, run_cmd)
-
-    server.setup_world()
-
-    # ---- OPTIONAL EXTRA PLUGINS (CORE installs automatically) ----
-    show_plugin_menu()
-    choice = input("\nSelect extra plugins (optional): ").strip()
-
-    extra_indexes = None
-    if choice:
-        extra_indexes = [int(x) for x in choice.split() if x.isdigit()]
-
-    server.install_plugins_by_index(extra_indexes)
-
-    server.start()
