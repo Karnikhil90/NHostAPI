@@ -1,43 +1,48 @@
-import os
-import requests
-import shutil
-import subprocess
-import threading
-import platform
+import os,platform, requests,subprocess,threading,shutil,yaml
+
 # import tarfile,zipfile 
 from packaging.version import Version
 
 
 # Java - Minecraft mapping (ignore patch versions)
 JAVA_MC_MAP = {
-    8:  ("1.8.0",  "1.16.5"),
-    16: ("1.17.0", "1.17.1"),
-    17: ("1.18.0", "1.20.4"),
+    8:  ("1.8.0",  "1.12"),
+    11: ("1.13",   "1.16.5"),   # Java 11 → works perfectly for 1.16.x
+    16: ("1.17",   "1.17.1"),
+    17: ("1.18",   "1.20.4"),
     21: ("1.20.5", "1.21.9"),
 }
 
+
 JAVA_DOWNLOADS = {
     8: {
-        "linux": "https://api.adoptium.net/v3/binary/latest/8/ga/linux/x64/jre/hotspot/normal/eclipse",
-        "windows": "https://api.adoptium.net/v3/binary/latest/8/ga/windows/x64/jre/hotspot/normal/eclipse"
+        "linux":  "https://api.adoptium.net/v3/binary/latest/8/ga/linux/x64/jre/hotspot/normal/eclipse",
+        "windows":"https://api.adoptium.net/v3/binary/latest/8/ga/windows/x64/jre/hotspot/normal/eclipse"
+    },
+    11: {
+        "linux":  "https://api.adoptium.net/v3/binary/latest/11/ga/linux/x64/jre/hotspot/normal/eclipse",
+        "windows":"https://api.adoptium.net/v3/binary/latest/11/ga/windows/x64/jre/hotspot/normal/eclipse"
     },
     17: {
-        "linux": "https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jre/hotspot/normal/eclipse",
-        "windows": "https://api.adoptium.net/v3/binary/latest/17/ga/windows/x64/jre/hotspot/normal/eclipse"
+        "linux":  "https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jre/hotspot/normal/eclipse",
+        "windows":"https://api.adoptium.net/v3/binary/latest/17/ga/windows/x64/jre/hotspot/normal/eclipse"
     },
     21: {
-        "linux": "https://api.adoptium.net/v3/binary/latest/21/ga/linux/x64/jre/hotspot/normal/eclipse",
-        "windows": "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse"
+        "linux":  "https://api.adoptium.net/v3/binary/latest/21/ga/linux/x64/jre/hotspot/normal/eclipse",
+        "windows":"https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse"
     }
 }
+
 
 CORE_PLUGINS = {
     1: ("ViaVersion.jar", "https://github.com/ViaVersion/ViaVersion/releases/download/5.6.0/ViaVersion-5.6.0.jar"),
     2: ("ViaBackwards.jar", "https://github.com/ViaVersion/ViaBackwards/releases/download/5.6.0/ViaBackwards-5.6.0.jar"),
-    3: ("ViaRewind.jar", "https://github.com/ViaVersion/ViaRewind/releases/download/4.0.12/ViaRewind-4.0.12.jar"),
-    4: ("Geyser-Spigot.jar", "https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot"),
-    5: ("floodgate-spigot.jar", "https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot"),
-    6: ("Chunky.jar", "https://cdn.modrinth.com/data/fALzjamp/versions/P3y2MXnd/Chunky-Bukkit-1.4.40.jar"),
+    3: ("ViaRewind.jar", "https://github.com/ViaVersion/ViaRewind/releases/download/4.0.12/ViaRewind-4.0.12.jar")
+}
+CORE_PLUGINS_PLUS = {
+    1: ("Chunky.jar", "https://cdn.modrinth.com/data/fALzjamp/versions/P3y2MXnd/Chunky-Bukkit-1.4.40.jar"),
+    2: ("Geyser-Spigot.jar", "https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot"),
+    3: ("floodgate-spigot.jar", "https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot"),
 }
 
 
@@ -140,7 +145,40 @@ class MinecraftServer:
 
                 f.write(f"{k}={v}\n")
 
-    def install_plugins(self, extra_plugins: list[tuple[str, str]] | None = None):
+    def setup_geyser(self):
+        geyser_config_path = os.path.join(self.world_dir, "plugins", "Geyser-Spigot", "config.yml")
+        
+        # if not os.path.exists(geyser_config_path):
+        #     print("⚠ Geyser config not found, skipping setup.")
+        #     return
+        
+        with open(geyser_config_path, "r") as f:
+            config = yaml.safe_load(f)
+        
+        # Bedrock login (Floodgate must be enabled for Xbox auth)
+        if "bedrock" not in config:
+            config["bedrock"] = {}
+        
+        config["bedrock"]["enabled"] = True
+        config["bedrock"]["address"] = "0.0.0.0"
+        config["bedrock"]["port"] = 19132
+        config["bedrock"]["motd1"] = self.config.get("motd", "GeyserMC Server") 
+        config["bedrock"]["motd2"] = self.config.get("world_name", "world")
+        config["bedrock"]["auto-auth"] = False  # don't force login, optional
+        
+        # Resource pack settings (players can choose)
+        if "remote" not in config:
+            config["remote"] = {}
+        config["remote"]["resource-pack"] = None  # or URL if you want to force it
+        config["remote"]["force"] = False  # don't force download
+        
+        # Save the config
+        with open(geyser_config_path, "w") as f:
+            yaml.safe_dump(config, f)
+        
+        print("✔ Geyser configured. Bedrock login optional, MCPack optional.")
+
+    def install_plugins(self, extra_plugins: list[tuple[str, str]] | None = None, force_plus: bool = False):    
         world_plugins = os.path.join(self.world_dir, "plugins")
         os.makedirs(world_plugins, exist_ok=True)
 
@@ -165,12 +203,21 @@ class MinecraftServer:
         for jar, url in CORE_PLUGINS.values():
             install(jar, url)
 
-        # Optional extra plugins (tuple-based)
-        if not extra_plugins:
-            return
+      # Determine if we should install CORE_PLUGINS_PLUS
+        # major, _ = 
+        mc_version = (float(self.config.get("version", "1.16").rsplit(".", 1)[0]) >= 1.18 )  # get MC version from server config
 
-        for jar, url in extra_plugins:
-            install(jar, url)
+        if force_plus or mc_version:
+            for jar, url in CORE_PLUGINS_PLUS.values():
+                install(jar, url)
+
+            self.setup_geyser() #some important config to run 
+
+        # Optional extra plugins passed by user
+        if extra_plugins:
+            for jar, url in extra_plugins:
+                install(jar, url)
+
 
     def get_os(self) -> str:
         return "windows" if platform.system().lower().startswith("win") else "linux"

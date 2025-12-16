@@ -1,9 +1,15 @@
 # Python cache
 __pycache__/
 *.pyc
+venv/
 
 # Generated runtime directories to save user data
 javas/
 plugins/
 versions/
 servers/
+
+# test % debug
+debug/
+test/
+bot-test/
