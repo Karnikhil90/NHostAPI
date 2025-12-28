@@ -1,10 +1,10 @@
 from nhostapi import MinecraftServer
+from pathlib import Path
 
-# ---------------- ASCII HEADER ----------------
+def print_banner():
+    print(r"""
+          
 
-print(r"""
-                                                                                                                                                                      
-                                                                                                                                                                      
 NNNNNNNN        NNNNNNNNHHHHHHHHH     HHHHHHHHH                                           tttt                        AAA               PPPPPPPPPPPPPPPPP   IIIIIIIIII
 N:::::::N       N::::::NH:::::::H     H:::::::H                                        ttt:::t                       A:::A              P::::::::::::::::P  I::::::::I
 N::::::::N      N::::::NH:::::::H     H:::::::H                                        t:::::t                      A:::::A             P::::::PPPPPP:::::P I::::::::I
@@ -21,22 +21,20 @@ N::::::N      N::::::::NHH::::::H     H::::::HHo:::::ooooo:::::os:::::ssss::::::
 N::::::N       N:::::::NH:::::::H     H:::::::Ho:::::::::::::::os::::::::::::::s       tt::::::::::::::t A:::::A               A:::::A  P::::::::P          I::::::::I
 N::::::N        N::::::NH:::::::H     H:::::::H oo:::::::::::oo  s:::::::::::ss          tt:::::::::::ttA:::::A                 A:::::A P::::::::P          I::::::::I
 NNNNNNNN         NNNNNNNHHHHHHHHH     HHHHHHHHH   ooooooooooo     sssssssssss              ttttttttttt AAAAAAA                   AAAAAAAPPPPPPPPPP          IIIIIIIIII
-                                                                                                                                                                                                                                                                                                                              
-                                                                                                                                                                    
-""")
+   
+          
+    """)
+    print("by Nikhil Karmakar | MIT License")
+    print("Pre-Alpha v0.0.2\n")
 
-print("by Nikhil Karmakar | MIT License")
-print("Pre-Alpha v0.0.2\n")
-
-# ---------------- PLUGINS ----------------
 
 MORE_PLUGINS = {
     1: ("ClearLag.jar", "https://cdn.modrinth.com/data/LY9bsstc/versions/aZHtlHAi/ClearLag-1.0.1.jar"),
     2: ("TAB.jar", "https://cdn.modrinth.com/data/gG7VFbG0/versions/BQc9Xm3K/TAB%20v5.4.0.jar"),
     3: ("PVDC.jar", "https://cdn.modrinth.com/data/shwtt0v9/versions/jrKq7Fvp/PVDC-2.3.3.jar"),
     4: ("voicechat-bukkit-2.6.7.jar", "https://hangarcdn.papermc.io/plugins/henkelmax/SimpleVoiceChat/versions/bukkit-2.6.7/PAPER/voicechat-bukkit-2.6.7.jar"),
-    5 :("spark-1.10.156-bukkit.jar", "https://ci.lucko.me/job/spark/506/artifact/spark-bukkit/build/libs/spark-1.10.156-bukkit.jar"),
-    6 :("playit-minecraft-plugin.jar", "https://github.com/playit-cloud/playit-minecraft-plugin/releases/latest/download/playit-minecraft-plugin.jar")
+    # 5 :("playit-minecraft-plugin.jar", "https://github.com/playit-cloud/playit-minecraft-plugin/releases/latest/download/playit-minecraft-plugin.jar")
+    # 6 :("spark-1.10.156-bukkit.jar", "https://ci.lucko.me/job/spark/506/artifact/spark-bukkit/build/libs/spark-1.10.156-bukkit.jar"),
 }
 
 def show_plugin_menu():
@@ -46,44 +44,144 @@ def show_plugin_menu():
     print("\nExample input: 1 2")
     print("Press ENTER to skip plugin installation")
 
-# ---------------- CONFIG ----------------
+def load_basic_config() -> dict:
+    """Load things that are not saved per world."""
+    return {
+        "motd": input("Enter description (motd) [default]: ").strip()
+                or "Nikhil Java & Bedrock Server",
+        "view-distance": int(input("View Distance [8]: ").strip() or 8),
+    }
 
-config = {
-    "version": input("MC Version [1.21.8]: ").strip() or "1.21.8",
-    "world_name": input("World Name [my_new_world]: ").strip() or "my_new_world",
-    "motd": input("Enter description (motd) [Enter for default setting]: ").strip() or "Nikhil Java & Bedrock Server",
-    "view-distance": int(input("View Distance [8]: ").strip() or 8),
-    "port": 25565,
-    "gamemode": "survival",
-    "difficulty": "hard",
-    "online-mode": False,
-    "hardcore": False,
-}
+def load_saved_config(selected_world: str) -> dict:
+    """Load things that are saved for the world or pre-defined."""
+    return {
+        "world_name": selected_world,
+        "version": input("MC Version [1.21.8]: ").strip() or "1.21.8",
+        "port": 25565,
+        "gamemode": "survival",
+        "difficulty": "hard",
+        "online-mode": False,
+        "hardcore": False,
+    }
 
-max_ram = input("Max RAM [2G]: ").strip() or "2G"
-run_cmd = f"java -Xms1M -Xmx{max_ram} -XX:+UseG1GC -jar server.jar nogui --force"
+def choose_world_and_config() -> dict:
+    existing_worlds = check_existing_worlds()
 
-# ---------------- SERVER ----------------
+    if existing_worlds:
+        print("\nExisting Worlds:")
+        for i, world in enumerate(existing_worlds, start=1):
+            print(f" {i}. {world}")
 
-server = MinecraftServer(config, run_cmd)
-server.setup_world()
+        choice = input("\nSelect world number (ENTER to create new): ").strip()
+        if choice:
+            try:
+                selected_world = existing_worlds[int(choice) - 1]
+            except (ValueError, IndexError):
+                print("Invalid choice, creating new world.")
+                selected_world = input("Enter new world name: ").strip() or "my_new_world"
+        else:
+            selected_world = input("Enter new world name: ").strip() or "my_new_world"
+    else:
+        print("No existing worlds found.")
+        selected_world = input("Enter new world name: ").strip() or "my_new_world"
 
-# ---------------- PLUGINS ----------------
+    # Ask user which type of changes
+    print("\nChoose configuration type:")
+    print("1. Basic changes (not saved, MOTD, view distance, RAM, etc.)")
+    print("2. Saved changes (saved, world name, version, difficulty, etc.)")
+    print("3. All changes (basic + saved)")
+    config_type = input("Choice [1]: ").strip() or "1"
 
-show_plugin_menu()
-choice = input("\nSelect extra plugins (optional): ").strip()
+    basic = load_basic_config()
+    saved = load_saved_config(selected_world)
 
-extra_plugins = None
-if choice:
-    extra_plugins = [
+    if config_type == "1":
+        saved.update(basic)  # Only apply basic changes
+        return saved
+    elif config_type == "2":
+        return saved  # Only saved changes
+    elif config_type == "3":
+        saved.update(basic)  # Apply both
+        return saved
+    else:
+        print("Invalid choice, defaulting to Basic changes.")
+        saved.update(basic)
+        return saved
+
+
+def check_existing_worlds() -> list[str]:
+    worlds = []
+    root = Path("servers")
+
+    if not root.exists() or not root.is_dir():
+        return worlds
+
+    for item in root.iterdir():
+        if item.is_dir() and (item / "server.jar").is_file():
+            worlds.append(item.name)
+
+    return worlds
+
+def select_or_create_world(existing_worlds: list[str]) -> str:
+    if not existing_worlds:
+        print("No existing worlds found.")
+        return input("Enter new world name: ").strip() or "my_new_world"
+
+    print("\nExisting Worlds:")
+    for i, world in enumerate(existing_worlds, start=1):
+        print(f" {i}. {world}")
+
+    choice = input(
+        "\nSelect world number (ENTER to create new): "
+    ).strip()
+
+    if not choice:
+        return input("Enter new world name: ").strip() or "my_new_world"
+
+    try:
+        index = int(choice) - 1
+        return existing_worlds[index]
+    except (ValueError, IndexError):
+        print("Invalid choice. Creating new world.")
+        return input("Enter new world name: ").strip() or "my_new_world"
+
+def setup_server(config: dict) -> MinecraftServer:
+    max_ram = input("Max RAM [2G]: ").strip() or "2G"
+    run_cmd = f"java -Xms1M -Xmx{max_ram} -XX:+UseG1GC -jar server.jar nogui --force"
+
+    server = MinecraftServer(config, run_cmd)
+    server.setup_world()
+    return server
+
+def select_plugins():
+    show_plugin_menu()
+    choice = input("\nSelect extra plugins (optional): ").strip()
+
+    if not choice:
+        return None
+
+    return [
         MORE_PLUGINS[i]
         for i in map(int, choice.split())
         if i in MORE_PLUGINS
     ]
 
-server.install_plugins(extra_plugins)
+def main():
+    print_banner()
 
-# ---------------- START ----------------
+    # First choose world and config type
+    config = choose_world_and_config()
 
-print("\nStarting Minecraft Server...")
-server.start()
+    server = setup_server(config)
+
+    plugins = select_plugins()
+    server.install_plugins(plugins)
+
+    print("\nStarting Minecraft Server...")
+    server.start()
+
+
+if __name__ == "__main__":
+    main()
+
+
