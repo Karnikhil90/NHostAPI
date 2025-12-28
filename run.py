@@ -1,12 +1,8 @@
 from nhostapi import MinecraftServer
-from colorama import Fore, Style, init
-
-# Initialize colorama
-init(autoreset=True)
 
 # ---------------- ASCII HEADER ----------------
 
-print(Fore.GREEN + r"""
+print(r"""
                                                                                                                                                                       
                                                                                                                                                                       
 NNNNNNNN        NNNNNNNNHHHHHHHHH     HHHHHHHHH                                           tttt                        AAA               PPPPPPPPPPPPPPPPP   IIIIIIIIII
@@ -29,8 +25,8 @@ NNNNNNNN         NNNNNNNHHHHHHHHH     HHHHHHHHH   ooooooooooo     sssssssssss   
                                                                                                                                                                     
 """)
 
-print(Fore.MAGENTA + "by Nikhil Karmakar | MIT License")
-print(Fore.YELLOW + "Pre-Alpha v0.0.2\n")
+print("by Nikhil Karmakar | MIT License")
+print("Pre-Alpha v0.0.2\n")
 
 # ---------------- PLUGINS ----------------
 
@@ -39,6 +35,8 @@ MORE_PLUGINS = {
     2: ("TAB.jar", "https://cdn.modrinth.com/data/gG7VFbG0/versions/BQc9Xm3K/TAB%20v5.4.0.jar"),
     3: ("PVDC.jar", "https://cdn.modrinth.com/data/shwtt0v9/versions/jrKq7Fvp/PVDC-2.3.3.jar"),
     4: ("voicechat-bukkit-2.6.7.jar", "https://hangarcdn.papermc.io/plugins/henkelmax/SimpleVoiceChat/versions/bukkit-2.6.7/PAPER/voicechat-bukkit-2.6.7.jar"),
+    5 :("spark-1.10.156-bukkit.jar", "https://ci.lucko.me/job/spark/506/artifact/spark-bukkit/build/libs/spark-1.10.156-bukkit.jar"),
+    6 :("playit-minecraft-plugin.jar", "https://github.com/playit-cloud/playit-minecraft-plugin/releases/latest/download/playit-minecraft-plugin.jar")
 }
 
 def show_plugin_menu():
@@ -52,18 +50,18 @@ def show_plugin_menu():
 
 config = {
     "version": input("MC Version [1.21.8]: ").strip() or "1.21.8",
-    "world_name": input("World Name [bedrock]: ").strip() or "bedrock",
+    "world_name": input("World Name [my_new_world]: ").strip() or "my_new_world",
     "motd": input("Enter description (motd) [Enter for default setting]: ").strip() or "Nikhil Java & Bedrock Server",
     "view-distance": int(input("View Distance [8]: ").strip() or 8),
     "port": 25565,
     "gamemode": "survival",
-    "difficulty": "normal",
+    "difficulty": "hard",
     "online-mode": False,
     "hardcore": False,
 }
 
 max_ram = input("Max RAM [2G]: ").strip() or "2G"
-run_cmd = f"java -Xms1M -Xmx{max_ram} -jar server.jar nogui --force"
+run_cmd = f"java -Xms1M -Xmx{max_ram} -XX:+UseG1GC -jar server.jar nogui --force"
 
 # ---------------- SERVER ----------------
 
