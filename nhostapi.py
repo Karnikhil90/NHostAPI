@@ -147,36 +147,47 @@ class MinecraftServer:
 
     def setup_geyser(self):
         geyser_config_path = os.path.join(self.world_dir, "plugins", "Geyser-Spigot", "config.yml")
-        
-        # if not os.path.exists(geyser_config_path):
-        #     print("⚠ Geyser config not found, skipping setup.")
-        #     return
-        
+        geyser_folder = os.path.dirname(geyser_config_path)
+
+        # Ensure the directory exists
+        os.makedirs(geyser_folder, exist_ok=True)
+
+        # If the file doesn't exist, create it with an empty dict
+        if not os.path.exists(geyser_config_path):
+            with open(geyser_config_path, "w") as f:
+                yaml.safe_dump({}, f)
+
+        # Load existing config safely
         with open(geyser_config_path, "r") as f:
-            config = yaml.safe_load(f)
-        
-        # Bedrock login (Floodgate must be enabled for Xbox auth)
-        if "bedrock" not in config:
-            config["bedrock"] = {}
-        
+            config = yaml.safe_load(f) or {}
+
+        # Bedrock login settings
+        config.setdefault("bedrock", {})
         config["bedrock"]["enabled"] = True
         config["bedrock"]["address"] = "0.0.0.0"
         config["bedrock"]["port"] = 19132
-        config["bedrock"]["motd1"] = self.config.get("motd", "GeyserMC Server") 
+        config["bedrock"]["motd1"] = self.config.get("motd", "GeyserMC Server")
         config["bedrock"]["motd2"] = self.config.get("world_name", "world")
-        config["bedrock"]["auto-auth"] = False  # don't force login, optional
-        
-        # Resource pack settings (players can choose)
-        if "remote" not in config:
-            config["remote"] = {}
-        config["remote"]["resource-pack"] = None  # or URL if you want to force it
-        config["remote"]["force"] = False  # don't force download
-        
-        # Save the config
+        config["bedrock"]["auto-auth"] = False  # Set True if using Floodgate
+
+        # Remote server settings (Java server)
+        config.setdefault("remote", {})
+        config["remote"]["address"] = self.config.get("java_address", "127.0.0.1")
+        config["remote"]["port"] = self.config.get("java_port", 25565)
+        config["remote"]["auth-type"] = self.config.get("auth_type", "online")
+
+        # Resource pack / MCPacks settings
+        config.setdefault("bedrock-resource-pack", {})
+        # Example: send resource pack from URL
+        if "resource_pack_url" in self.config:
+            config["bedrock-resource-pack"]["url"] = self.config["resource_pack_url"]
+            config["bedrock-resource-pack"]["hash"] = self.config.get("resource_pack_hash", "")
+
+        # Save updated config
         with open(geyser_config_path, "w") as f:
-            yaml.safe_dump(config, f)
-        
-        print("✔ Geyser configured. Bedrock login optional, MCPack optional.")
+            yaml.safe_dump(config, f, sort_keys=False)
+
+        print(f"✅ Geyser config ready at {geyser_config_path}")
 
     def install_plugins(self, extra_plugins: list[tuple[str, str]] | None = None, force_plus: bool = False):    
         world_plugins = os.path.join(self.world_dir, "plugins")
