@@ -13,3 +13,4 @@ servers/
 debug/
 test/
 bot-test/
+*.zip
