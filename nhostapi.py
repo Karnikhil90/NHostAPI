@@ -10,8 +10,10 @@ JAVA_MC_MAP = {
     11: ("1.13",   "1.16.5"),   # Java 11 → works perfectly for 1.16.x
     16: ("1.17",   "1.17.1"),
     17: ("1.18",   "1.20.4"),
-    21: ("1.20.5", "1.21.9"),
+    21: ("1.20.5", "1.21.11"),
 }
+
+LATEST_JAVA_LTS = 25  # fallback
 
 
 JAVA_DOWNLOADS = {
@@ -30,7 +32,12 @@ JAVA_DOWNLOADS = {
     21: {
         "linux":  "https://api.adoptium.net/v3/binary/latest/21/ga/linux/x64/jre/hotspot/normal/eclipse",
         "windows":"https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse"
+    },
+    25: {
+        "linux":  "https://api.adoptium.net/v3/binary/latest/25/ga/linux/x64/jre/hotspot/normal/eclipse",
+        "windows":"https://api.adoptium.net/v3/binary/latest/25/ga/windows/x64/jre/hotspot/normal/eclipse"
     }
+    
 }
 
 
@@ -40,7 +47,7 @@ CORE_PLUGINS = {
     3: ("ViaRewind.jar", "https://github.com/ViaVersion/ViaRewind/releases/download/4.0.12/ViaRewind-4.0.12.jar")
 }
 CORE_PLUGINS_PLUS = {
-    1: ("Chunky.jar", "https://cdn.modrinth.com/data/fALzjamp/versions/P3y2MXnd/Chunky-Bukkit-1.4.40.jar"),
+    # 1: ("Chunky.jar", "https://cdn.modrinth.com/data/fALzjamp/versions/P3y2MXnd/Chunky-Bukkit-1.4.40.jar"),
     2: ("Geyser-Spigot.jar", "https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot"),
     3: ("floodgate-spigot.jar", "https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot"),
 }
@@ -293,9 +300,18 @@ class MinecraftServer:
 
     def mc_to_java(self, mc_version: str) -> int:
         v = Version(mc_version)
+
+        # Normal range matching
         for java, (start, end) in JAVA_MC_MAP.items():
             if Version(start) <= v <= Version(end):
                 return java
+
+        # Fallback
+        highest_end = max(Version(end) for _, (_, end) in JAVA_MC_MAP.items())
+
+        if v > highest_end:
+            return LATEST_JAVA_LTS
+
         raise RuntimeError(f"No Java mapping for Minecraft {mc_version}")
 
     def start(self):

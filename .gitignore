@@ -3,11 +3,17 @@ __pycache__/
 *.pyc
 venv/
 
+
 # Generated runtime directories to save user data
 javas/
 plugins/
 versions/
 servers/
+mojang/
+.logs/
+#This file Genrated when U run for the firt time
+setup_done.txt
+
 
 # test % debug
 debug/
