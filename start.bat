@@ -1,7 +1,8 @@
 @echo off
-title Minecraft Server Wrapper
+title NHostAPI by Nikhil Karmakar
 
-echo Minecraft Server Launcher
+echo Minecraft Server of NHostAPI by Nikhil Karmakar
+echo NHostAPI (v0.0.3 Pre-Alpha)
 echo --------------------------
 echo.
 
@@ -13,6 +14,8 @@ if errorlevel 1 (
     echo Download Python from:
     echo https://www.python.org/downloads/
     echo IMPORTANT: Check "Add Python to PATH" during install.
+    echo or
+    echo winget install --id=Python.Python.3.13
     echo.
     pause
     exit /b

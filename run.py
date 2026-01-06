@@ -1,3 +1,20 @@
+#  NHostAPI - GitHub Repository Synchronization and API Tool
+#  Copyright (C) 2026 Nikhil Karmakar
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <https://www.gnu.org/licenses/>
+
+
 from pathlib import Path
 
 from nhostapi import MinecraftServer
@@ -6,28 +23,22 @@ from nhostapi import MinecraftServer
 def print_banner():
     print(r"""
 
-
-NNNNNNNN        NNNNNNNNHHHHHHHHH     HHHHHHHHH                                           tttt                        AAA               PPPPPPPPPPPPPPPPP   IIIIIIIIII
-N:::::::N       N::::::NH:::::::H     H:::::::H                                        ttt:::t                       A:::A              P::::::::::::::::P  I::::::::I
-N::::::::N      N::::::NH:::::::H     H:::::::H                                        t:::::t                      A:::::A             P::::::PPPPPP:::::P I::::::::I
-N:::::::::N     N::::::NHH::::::H     H::::::HH                                        t:::::t                     A:::::::A            PP:::::P     P:::::PII::::::II
-N::::::::::N    N::::::N  H:::::H     H:::::H     ooooooooooo       ssssssssss   ttttttt:::::ttttttt              A:::::::::A             P::::P     P:::::P  I::::I
-N:::::::::::N   N::::::N  H:::::H     H:::::H   oo:::::::::::oo   ss::::::::::s  t:::::::::::::::::t             A:::::A:::::A            P::::P     P:::::P  I::::I
-N:::::::N::::N  N::::::N  H::::::HHHHH::::::H  o:::::::::::::::oss:::::::::::::s t:::::::::::::::::t            A:::::A A:::::A           P::::PPPPPP:::::P   I::::I
-N::::::N N::::N N::::::N  H:::::::::::::::::H  o:::::ooooo:::::os::::::ssss:::::stttttt:::::::tttttt           A:::::A   A:::::A          P:::::::::::::PP    I::::I
-N::::::N  N::::N:::::::N  H:::::::::::::::::H  o::::o     o::::o s:::::s  ssssss       t:::::t                A:::::A     A:::::A         P::::PPPPPPPPP      I::::I
-N::::::N   N:::::::::::N  H::::::HHHHH::::::H  o::::o     o::::o   s::::::s            t:::::t               A:::::AAAAAAAAA:::::A        P::::P              I::::I
-N::::::N    N::::::::::N  H:::::H     H:::::H  o::::o     o::::o      s::::::s         t:::::t              A:::::::::::::::::::::A       P::::P              I::::I
-N::::::N     N:::::::::N  H:::::H     H:::::H  o::::o     o::::ossssss   s:::::s       t:::::t    tttttt   A:::::AAAAAAAAAAAAA:::::A      P::::P              I::::I
-N::::::N      N::::::::NHH::::::H     H::::::HHo:::::ooooo:::::os:::::ssss::::::s      t::::::tttt:::::t  A:::::A             A:::::A   PP::::::PP          II::::::II
-N::::::N       N:::::::NH:::::::H     H:::::::Ho:::::::::::::::os::::::::::::::s       tt::::::::::::::t A:::::A               A:::::A  P::::::::P          I::::::::I
-N::::::N        N::::::NH:::::::H     H:::::::H oo:::::::::::oo  s:::::::::::ss          tt:::::::::::ttA:::::A                 A:::::A P::::::::P          I::::::::I
-NNNNNNNN         NNNNNNNHHHHHHHHH     HHHHHHHHH   ooooooooooo     sssssssssss              ttttttttttt AAAAAAA                   AAAAAAAPPPPPPPPPP          IIIIIIIIII
-
+ __    __  __    __                        __       ______   _______  ______ 
+|  \  |  \|  \  |  \                      |  \     /      \ |       \|      \
+| $$\ | $$| $$  | $$  ______    _______  _| $$_   |  $$$$$$\| $$$$$$$\\$$$$$$
+| $$$\| $$| $$__| $$ /      \  /       \|   $$ \  | $$__| $$| $$__/ $$ | $$  
+| $$$$\ $$| $$    $$|  $$$$$$\|  $$$$$$$ \$$$$$$  | $$    $$| $$    $$ | $$  
+| $$\$$ $$| $$$$$$$$| $$  | $$ \$$    \   | $$ __ | $$$$$$$$| $$$$$$$  | $$  
+| $$ \$$$$| $$  | $$| $$__/ $$ _\$$$$$$\  | $$|  \| $$  | $$| $$      _| $$_ 
+| $$  \$$$| $$  | $$ \$$    $$|       $$   \$$  $$| $$  | $$| $$     |   $$ \
+ \$$   \$$ \$$   \$$  \$$$$$$  \$$$$$$$     \$$$$  \$$   \$$ \$$      \$$$$$$
+                                                                             
+                                                                             
+                                                                             
 
     """)
-    print("by Nikhil Karmakar | MIT License")
-    print("Pre-Alpha v0.0.2\n")
+    print("by Nikhil Karmakar | GNU GENERAL PUBLIC LICENSE v3")
+    print("Pre-Alpha v0.0.3\n")
 
 
 MORE_PLUGINS = {
@@ -44,11 +55,22 @@ MORE_PLUGINS = {
         "https://cdn.modrinth.com/data/shwtt0v9/versions/jrKq7Fvp/PVDC-2.3.3.jar",
     ),
     4: (
-        "voicechat-bukkit-2.6.7.jar",
-        "https://hangarcdn.papermc.io/plugins/henkelmax/SimpleVoiceChat/versions/bukkit-2.6.7/PAPER/voicechat-bukkit-2.6.7.jar",
+        "SkinsRestorer.jar",
+        "https://github.com/SkinsRestorer/SkinsRestorer/releases/download/15.9.2/SkinsRestorer.jar",
     ),
-    5 : ("SkinsRestorer.jar","https://github.com/SkinsRestorer/SkinsRestorer/releases/download/15.9.2/SkinsRestorer.jar")
-    }
+    5:(
+        "Plane_ServerAnalytics.jar",
+        "https://github.com/plan-player-analytics/Plan/releases/download/5.6.2965/Plan-5.6-build-2965.jar"
+    ),
+    6:(
+        "EssentialsX-2.21.2.jar",
+        "https://github.com/EssentialsX/Essentials/releases/download/2.21.2/EssentialsX-2.21.2.jar"
+    ),
+    7:(
+        "Chunky-Bukkit-1.4.40.jar",
+        "https://cdn.modrinth.com/data/fALzjamp/versions/P3y2MXnd/Chunky-Bukkit-1.4.40.jar"
+    )
+}
 
 
 def show_plugin_menu():
@@ -63,7 +85,7 @@ def load_basic_config() -> dict:
     """Load things that are not saved per world."""
     return {
         "motd": input("Enter description (motd) [default]: ").strip()
-        or "Nikhil Java & Bedrock Server",
+        or "NHostAPI by Nikhil || Java & Bedrock Server",
         "view-distance": int(input("View Distance [12]: ").strip() or 12),
     }
 
