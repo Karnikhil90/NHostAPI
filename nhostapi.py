@@ -99,8 +99,8 @@ class MinecraftServer:
     def __init__(self, config: ServerConfig, cmd: str) -> None:
         self.defaults: ServerConfig = {
             "version": "1.21.1",
-            "world_name": "world",
-            "motd": "NHostAPI Managed Server",
+            "world_name": "fall_back_world",
+            "motd": "NHostAPI by Nikhil Java & Bedrock Server",
             "port": 25565,
             "gamemode": "survival",
             "difficulty": "normal",

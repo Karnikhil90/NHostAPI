@@ -156,3 +156,15 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+    print("=" * 30)
+    print("Press any key to close...")
+
+    try:
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.getch()
+        else:
+            input()
+    except Exception:
+        pass
