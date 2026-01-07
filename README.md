@@ -32,14 +32,18 @@ If you already have **Git** and **Python** installed:
 
 ```bash
 # 1. Get the code
-git clone [https://github.com/Karnikhil90/NHostAPI.git](https://github.com/Karnikhil90/NHostAPI.git)
+git clone https://github.com/Karnikhil90/NHostAPI.git
 cd NHostAPI
 
-# 2. Install dependencies
-pip install -r requirements.txt
+# 2. Python version cheak
+python --version
 
-# 3. Launch
+# 3. Install dependencies
+python -m pip install -r requirements.txt
+
+# 4. Launch
 python run.py
+
 
 ```
 
@@ -48,16 +52,17 @@ python run.py
 ### 📱 Termux / Debian Minimal
 
 ```bash
-git clone [https://github.com/Karnikhil90/NHostAPI.git](https://github.com/Karnikhil90/NHostAPI.git)
+git clone https://github.com/Karnikhil90/NHostAPI.git
 cd NHostAPI
-pip install --break-system-packages --user -r requirements.txt
+python3 --version
+python3 -m pip install --break-system-packages --user -r requirements.txt
 python3 run.py
 ```
 ---
 ### 📄 LICENSE
 
 NHostAPI is licensed under the **GNU General Public License v3.0**.
-Permissions of this strong copyleft license are conditioned on making available complete source code of licensed works and modifications under the same license. See the `LICENSE` file for full details.
+Permissions of this strong copyleft license are conditioned on making available complete source code of licensed works and modifications under the same license. See the ![LICENSE](LICENSE) file for full details.
 
 
 # 👨‍💻 About Me
