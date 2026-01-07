@@ -25,6 +25,15 @@ If you are on Windows, just follow these three steps:
 3. **Run:** Double-click the `start.bat` file.
 
 ---
+### 🌍 Play With Friends (Java + Bedrock)
+To play with friends from anywhere **without port forwarding**, use **Playit.gg**:
+
+- Download: https://playit.gg/download/windows
+- Create a tunnel and use the provided address
+- Works with **Minecraft Java & Bedrock Edition**
+
+
+---
 
 ### 💻 Developer Setup (Windows / Linux)
 
