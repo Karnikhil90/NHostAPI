@@ -23,13 +23,14 @@ def print_banner():
     print("Pre-Alpha v0.0.3\n")
 
 MORE_PLUGINS = {
-    1: ("ClearLag.jar", "https://cdn.modrinth.com/data/LY9bsstc/versions/aZHtlHAi/ClearLag-1.0.1.jar"),
+    1: ("EntityClearer.jar", "https://hangarcdn.papermc.io/plugins/Silverstone/EntityClearer/versions/4.1.3/PAPER/EntityClearer.jar"),
     2: ("TAB.jar", "https://cdn.modrinth.com/data/gG7VFbG0/versions/BQc9Xm3K/TAB%20v5.4.0.jar"),
     3: ("PVDC.jar", "https://cdn.modrinth.com/data/shwtt0v9/versions/jrKq7Fvp/PVDC-2.3.3.jar"),
     4: ("SkinsRestorer.jar", "https://github.com/SkinsRestorer/SkinsRestorer/releases/download/15.9.2/SkinsRestorer.jar"),
     5: ("Plane_ServerAnalytics.jar", "https://github.com/plan-player-analytics/Plan/releases/download/5.6.2965/Plan-5.6-build-2965.jar"),
     6: ("EssentialsX-2.21.2.jar", "https://github.com/EssentialsX/Essentials/releases/download/2.21.2/EssentialsX-2.21.2.jar"),
-    7: ("Chunky-Bukkit-1.4.40.jar", "https://cdn.modrinth.com/data/fALzjamp/versions/P3y2MXnd/Chunky-Bukkit-1.4.40.jar")
+    7: ("Chunky-Bukkit-1.4.40.jar", "https://cdn.modrinth.com/data/fALzjamp/versions/P3y2MXnd/Chunky-Bukkit-1.4.40.jar"),
+    8: ("LagCleanerX-1.2.jar","https://cdn.modrinth.com/data/8XKEf6gK/versions/FxEGkizq/LagCleanerX-1.2.jar")
 }
 
 # --- HELPERS ---
