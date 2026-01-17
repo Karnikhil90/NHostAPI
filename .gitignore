@@ -1,7 +1,8 @@
-# Python cache
+# Python cache & pytest
 __pycache__/
 *.pyc
 venv/
+.pytest_cache
 
 
 # Generated runtime directories to save user data
@@ -20,3 +21,6 @@ debug/
 test/
 bot-test/
 *.zip
+test*.*
+test-*.*
+
