@@ -343,7 +343,6 @@ class MinecraftServer:
         for path in cached:
             self.safe_copy(path, world_plugins / path.name)
 
-
     def get_os_name(self)->str:
         return (
             "windows" if platform.system().lower().startswith("win") else "linux"

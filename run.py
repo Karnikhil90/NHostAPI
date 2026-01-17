@@ -48,7 +48,6 @@ def get_safe_int(prompt: str, default: int) -> int:
     val = input(f"{prompt} [{default}]: ").strip()
     return int(val) if val.isdigit() else default
 
-# --- CORE LOGIC ---
 
 def check_existing_worlds() -> list[str]:
     root = Path("servers")
@@ -91,7 +90,6 @@ def get_world_and_action(existing_worlds: list[str]) -> tuple[str, bool]:
     return new_name, True
 
 def setup_server(config: dict) -> MinecraftServer:
-    # Use 2G default for Quick Start, or ask for RAM in Full Setup
     if "version" in config:
         max_ram = input("Max RAM [2G]: ").strip() or "2G"
     else:
@@ -119,9 +117,8 @@ def main():
     selected_world, should_configure = get_world_and_action(existing_worlds)
 
     if not should_configure:
-        # QUICK START PATH
         config = {"world_name": selected_world}
-        print(f"\n🚀 Quick Starting: {selected_world}...")
+        print(f"\n Quick Starting: {selected_world}...")
         server = setup_server(config)
         
         # This ensures Core and Core+ plugins are checked/installed automatically
