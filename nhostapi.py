@@ -21,13 +21,18 @@ import platform
 import shutil
 import subprocess
 import threading
-from pathlib import Path
-from typing import Any, Dict, Final, List, Optional, Tuple, TypedDict
-
+import time
 import requests
 import yaml
-from packaging.version import Version
 
+from pathlib import Path
+from packaging.version import Version
+from typing import (
+        Any, Dict, Final, List, Optional, 
+        Tuple, TypedDict ,Iterable
+    )
+
+from utility.NBrouser import NBrouser
 
 # --- Strong Typing for Configuration ---
 class ServerConfig(TypedDict, total=False):
@@ -117,6 +122,8 @@ class MinecraftServer:
         self.plugins_cache: Path = Path("plugins")
         self.world_dir: Path = self.servers_dir / str(self.config["world_name"])
 
+        self.browser = NBrouser()
+
         self._init_directories()
 
         self.jar_path: Optional[Path] = None
@@ -132,31 +139,44 @@ class MinecraftServer:
             p.mkdir(parents=True, exist_ok=True)
 
     def check_or_download_version(self) -> Path:
-        version: str = str(self.config["version"])
-        jar_path: Path = self.versions_dir / f"{version}.jar"
+        """
+        Ensure the PaperMC jar for the configured version exists.
+        Downloads it if missing, using NBrouser for safe, atomic download.
+        """
 
+        version: str = str(self.config.get("version"))
+        jar_path: Path = self.versions_dir / f"paper-{version}.jar"
+
+        # Already downloaded
         if jar_path.exists():
             self.jar_path = jar_path
             return jar_path
 
-        print(f"⬇ Downloading PaperMC {version}...")
+        # Fetch latest build info
+        api_url = f"https://api.papermc.io/v2/projects/paper/versions/{version}"
         try:
-            api_url: str = (
-                f"https://api.papermc.io/v2/projects/paper/versions/{version}"
-            )
             data = requests.get(api_url, timeout=10).json()
             build = data["builds"][-1]
-            url = f"{api_url}/builds/{build}/downloads/paper-{version}-{build}.jar"
-
-            with requests.get(url, stream=True, timeout=30) as r:
-                r.raise_for_status()
-                with open(jar_path, "wb") as f:
-                    for chunk in r.iter_content(chunk_size=8192):
-                        f.write(chunk)
-            self.jar_path = jar_path
-            return jar_path
+            download_url = f"{api_url}/builds/{build}/downloads/paper-{version}-{build}.jar"
         except Exception as e:
-            raise RuntimeError(f"Could not download PaperMC: {e}")
+            raise RuntimeError(f"Failed to fetch PaperMC build info: {e}")
+
+        print(f"⬇ Downloading PaperMC {version}...")
+
+        # Ensure versions directory exists
+        self.versions_dir.mkdir(parents=True, exist_ok=True)
+
+        # Use NBrouser to download with progress and atomic tmp file
+        result = self.browser.download(
+            url=download_url,
+            destination=self.versions_dir,  # NBrouser treats this as directory
+            filename=f"paper-{version}.jar",
+            show_progress=True,
+        )
+
+        self.jar_path = result["path"]
+        print(f"✔ PaperMC {version} downloaded to {self.jar_path}")
+        return self.jar_path
 
     def setup_world(self) -> None:
         if not self.jar_path:
@@ -183,7 +203,6 @@ class MinecraftServer:
                 f.write(f"{k}={val}\n")
 
     def setup_geyser(self) -> None:
-        """Configures Geyser-Spigot for Bedrock support."""
         geyser_config_path: Path = (
             self.world_dir / "plugins" / "Geyser-Spigot" / "config.yml"
         )
@@ -196,7 +215,6 @@ class MinecraftServer:
         with open(geyser_config_path, "r") as f:
             config = yaml.safe_load(f) or {}
 
-        # Bedrock login settings
         config.setdefault("bedrock", {})
         config["bedrock"].update(
             {
@@ -209,7 +227,6 @@ class MinecraftServer:
             }
         )
 
-        # Remote server settings (Java server)
         config.setdefault("remote", {})
         config["remote"].update(
             {
@@ -219,7 +236,6 @@ class MinecraftServer:
             }
         )
 
-        # Resource pack settings
         config.setdefault("bedrock-resource-pack", {})
         if "resource_pack_url" in self.config:
             config["bedrock-resource-pack"]["url"] = self.config["resource_pack_url"]
@@ -230,52 +246,111 @@ class MinecraftServer:
         with open(geyser_config_path, "w") as f:
             yaml.safe_dump(config, f, sort_keys=False)
 
-        print(f"✅ Geyser config ready at {geyser_config_path}")
+    def ensure_downloaded(
+        self,
+        browser,
+        *,
+        download_dir: str | Path,
+        files: Iterable[Tuple[str, str]],
+        show_progress: bool = True,
+    ) -> list[Path]:
+        """
+        Ensure all files exist inside `download_dir`.
+
+        files: iterable of (filename, url)
+
+        Returns list of resolved Paths.
+        """
+        download_dir = Path(download_dir)
+        download_dir.mkdir(parents=True, exist_ok=True)
+
+        resolved: list[Path] = []
+
+        for name, url in files:
+            path = download_dir / name
+
+            if not path.exists():
+                print(f"⬇ Downloading {name}...")
+                result = self.browser.download(
+                    url=url,
+                    destination=download_dir,
+                    filename=name,
+                    show_progress=show_progress,
+                )
+                path = result["path"]
+
+            resolved.append(path)
+
+        return resolved
+
+
+    def safe_copy(self, src: Path, dst: Path, *, overwrite: bool = False) -> None:
+        """
+        Copy a file safely with Windows-lock tolerance.
+        """
+        src = Path(src)
+        dst = Path(dst)
+
+        if not src.exists():
+            raise FileNotFoundError(src)
+
+        if dst.exists() and not overwrite:
+            return
+
+        dst.parent.mkdir(parents=True, exist_ok=True)
+
+        for _ in range(8):
+            try:
+                shutil.copy(src, dst)
+                return
+            except PermissionError:
+                time.sleep(0.25)
+
+        shutil.copy(src, dst)
 
     def install_plugins(
         self,
         extra_plugins: Optional[List[Tuple[str, str]]] = None,
         force_plus: bool = False,
     ) -> None:
-        world_plugins_dir: Path = self.world_dir / "plugins"
-        world_plugins_dir.mkdir(exist_ok=True)
+        world_plugins = self.world_dir / "plugins"
+        world_plugins.mkdir(parents=True, exist_ok=True)
 
-        def _install(jar: str, url: str) -> None:
-            cache_path: Path = self.plugins_cache / jar
-            world_path: Path = world_plugins_dir / jar
+        self.plugins_cache.mkdir(parents=True, exist_ok=True)
 
-            if not cache_path.exists():
-                print(f"⬇ Downloading {jar}...")
-                with requests.get(url, stream=True, timeout=60) as r:
-                    r.raise_for_status()
-                    with open(cache_path, "wb") as f:
-                        for chunk in r.iter_content(chunk_size=8192):
-                            f.write(chunk)
+        core = list(CORE_PLUGINS.values())
+        plus = list(CORE_PLUGINS_PLUS.values())
 
-            if not world_path.exists():
-                shutil.copy(cache_path, world_path)
-                print(f"✔ Installed {jar}")
-
-        for jar, url in CORE_PLUGINS.values():
-            _install(jar, url)
+        files = core
 
         try:
             major_ver = float(str(self.config.get("version", "1.16")).rsplit(".", 1)[0])
             if force_plus or major_ver >= 1.18:
-                for jar, url in CORE_PLUGINS_PLUS.values():
-                    _install(jar, url)
+                files += plus
                 self.setup_geyser()
         except (ValueError, IndexError):
             pass
 
         if extra_plugins:
-            for jar, url in extra_plugins:
-                _install(jar, url)
+            files += list(extra_plugins)
 
-    def ensure_java(self, java_ver: int) -> str:
-        os_name: str = (
+        cached = self.ensure_downloaded(
+            self.browser,
+            download_dir=self.plugins_cache,
+            files=files,
+        )
+
+        for path in cached:
+            self.safe_copy(path, world_plugins / path.name)
+
+
+    def get_os_name(self)->str:
+        return (
             "windows" if platform.system().lower().startswith("win") else "linux"
         )
+    
+    def ensure_java(self, java_ver: int) -> str:
+        os_name = self.get_os_name()
         base_dir: Path = Path("javas") / f"java{java_ver}"
         java_bin: str = "bin/java.exe" if os_name == "windows" else "bin/java"
         java_path: Path = base_dir / java_bin
@@ -283,15 +358,10 @@ class MinecraftServer:
         if java_path.exists():
             return str(java_path.absolute())
 
-        print(f"⬇ Downloading Java {java_ver} runtime...")
         base_dir.mkdir(parents=True, exist_ok=True)
         archive: Path = base_dir / "runtime_dl"
 
-        with requests.get(JAVA_DOWNLOADS[java_ver][os_name], stream=True) as r:
-            r.raise_for_status()
-            with open(archive, "wb") as f:
-                for chunk in r.iter_content(8192):
-                    f.write(chunk)
+        self.browser.download(JAVA_DOWNLOADS[java_ver][os_name], archive)
 
         import tarfile
         import zipfile
@@ -302,6 +372,7 @@ class MinecraftServer:
         except zipfile.BadZipFile:
             with tarfile.open(archive) as t:
                 t.extractall(base_dir)
+
         archive.unlink()
 
         inner_folder = next(base_dir.iterdir())
@@ -321,7 +392,7 @@ class MinecraftServer:
         return LATEST_JAVA_LTS if v > highest_end else 17
 
     def start(self) -> None:
-        java_ver: int = self.mc_to_java(str(self.config["version"]))
+        java_ver: int = self.mc_to_java(str(self.config.get("version")))
         java_bin: str = self.ensure_java(java_ver)
 
         cmd_parts: List[str] = self.cmd.split()

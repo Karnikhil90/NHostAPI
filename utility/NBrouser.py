@@ -87,39 +87,36 @@ class NBrouser:
         return self.get(url, **kwargs).json()
 
     def download(
-        self,
-        url: str,
-        destination: os.PathLike | str = "",
-        *,
-        filename: Optional[str] = None,
-        resume: bool = True,
-        show_progress: bool = True,
-        on_progress: Optional[Callable[[int, Optional[int]], None]] = None
-    ) -> Dict[str, Any]:
-        """
-        1.Atomic `.tmp` writes
-        2.Built-in progress bar (show_progress=True)
-        3.Optional custom progress callback (on_progress)
-        
-        Returns dictionary or map type:
-            {
-                "path": pathlib.Path,
-                "size": int (bytes),
-                "speed": float (bytes/sec),
-                "time": float (seconds)
-            }
-        """
-        dest_path = pathlib.Path(destination) if destination else pathlib.Path.cwd()
-        dest_path.mkdir(parents=True, exist_ok=True)
+    self,
+    url: str,
+    destination: os.PathLike | str = "",
+    *,
+    filename: Optional[str] = None,
+    resume: bool = True,
+    show_progress: bool = True,
+    on_progress: Optional[Callable[[int, Optional[int]], None]] = None
+) -> Dict[str, Any]:
 
-        try:
-            head_resp = self._session.head(url, timeout=self._timeout, allow_redirects=True)
-            head_resp.raise_for_status()
-        except (requests.exceptions.RequestException, requests.exceptions.ConnectionError):
+        dest = pathlib.Path(destination) if destination else pathlib.Path.cwd()
+
+        # If destination is a directory, we decide the filename.
+        if dest.exists() and dest.is_dir():
+            dest.mkdir(parents=True, exist_ok=True)
+            head_resp = None
+            try:
+                head_resp = self._session.head(url, timeout=self._timeout, allow_redirects=True)
+                head_resp.raise_for_status()
+            except requests.RequestException:
+                pass
+
+            final_name = self._resolve_filename(url, filename, response=head_resp)
+            target_path = dest / final_name
+        else:
+            # destination is a file path
+            target_path = dest
+            target_path.parent.mkdir(parents=True, exist_ok=True)
             head_resp = None
 
-        final_name = self._resolve_filename(url, filename, response=head_resp)
-        target_path = dest_path / final_name if dest_path.is_dir() else pathlib.Path(destination)
         temp_path = target_path.with_suffix(target_path.suffix + self.TEMP_SUFFIX)
 
         supports_resume = False
@@ -129,6 +126,7 @@ class NBrouser:
         headers = {}
         mode = "wb"
         written = 0
+
         if resume and supports_resume and temp_path.exists():
             written = temp_path.stat().st_size
             headers["Range"] = f"bytes={written}-"
@@ -146,33 +144,32 @@ class NBrouser:
                 for chunk in response.iter_content(self.CHUNK_SIZE):
                     if not chunk:
                         continue
+
                     stream.write(chunk)
                     written += len(chunk)
 
-                    # costom callback for Progress of the downloading
                     if on_progress:
                         on_progress(written, total)
-
                     elif show_progress:
                         elapsed = time.time() - start_time
-                        avg_speed = written / elapsed if elapsed > 0 else 0
+                        speed = written / elapsed if elapsed > 0 else 0
 
-                        written_str = self.format_size_str(written)
-                        total_str = self.format_size_str(total) if total else "??"
-                        speed_str = self.format_size_str(int(avg_speed)) + "/s"
+                        w_str = self.format_size_str(written)
+                        t_str = self.format_size_str(total) if total else "??"
+                        s_str = self.format_size_str(speed) + "/s"
 
                         if total:
                             percent = written * 100 / total
-                            print(f"\rDownloading {written_str}/{total_str} ({percent:.1f}%) @ {speed_str}", end="")
+                            line = f"Downloading {w_str}/{t_str} ({percent:5.1f}%) @ {s_str}"
                         else:
-                            print(f"\rDownloading {written_str} @ {speed_str}", end="")
+                            line = f"Downloading {w_str} @ {s_str}"
 
-                        sys.stdout.flush()
+                        print("\r" + line, end="", flush=True)
 
         temp_path.replace(target_path)
 
         if show_progress and not on_progress:
-            print()  # newline after progress
+            print()
 
         elapsed = time.time() - start_time
         avg_speed = written / elapsed if elapsed > 0 else 0
@@ -183,6 +180,7 @@ class NBrouser:
             "speed": avg_speed,
             "time": elapsed
         }
+
 
     @staticmethod
     def _compute_total_size(response: requests.Response, already_written: int) -> Optional[int]:
