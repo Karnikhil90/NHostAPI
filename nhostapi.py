@@ -13,7 +13,6 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>
-
 from __future__ import annotations
 
 import os
@@ -101,7 +100,7 @@ CORE_PLUGINS_PLUS: Final[Dict[int, Tuple[str, str]]] = {
 
 
 class MinecraftServer:
-    def __init__(self, config: ServerConfig, cmd: str) -> None:
+    def __init__(self, config: ServerConfig, command_to_run_jar_file: str) -> None:
         self.defaults: ServerConfig = {
             "version": "1.21.1",
             "world_name": "fall_back_world",
@@ -115,7 +114,7 @@ class MinecraftServer:
         }
 
         self.config: ServerConfig = {**self.defaults, **config}
-        self.cmd: str = cmd
+        self.command_to_run_jar_file: str = command_to_run_jar_file
 
         self.servers_dir: Path = Path("servers")
         self.versions_dir: Path = Path("versions")
@@ -390,15 +389,19 @@ class MinecraftServer:
         highest_end = max(Version(end) for _, (_, end) in JAVA_MC_MAP.items())
         return LATEST_JAVA_LTS if v > highest_end else 17
 
+    # Driver code: Doest not start my its self because It have never been called. 
+
     def start(self) -> None:
-        java_ver: int = self.mc_to_java(str(self.config.get("version")))
-        java_bin: str = self.ensure_java(java_ver)
+        java_version_info: int = self.mc_to_java(str(self.config.get("version")))
+        java_bin: str = self.ensure_java(java_version_info)
 
-        cmd_parts: List[str] = self.cmd.split()
-        cmd_parts[0] = java_bin
+        command_to_run_jar_file_parts: List[str] = self.command_to_run_jar_file.split()
+        command_to_run_jar_file_parts[0] = java_bin
 
+        # Setup for run as a process properly. 
+        # So if the this file process is killed then this will also killed with it
         self.process = subprocess.Popen(
-            cmd_parts,
+            command_to_run_jar_file_parts,
             cwd=str(self.world_dir),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
